@@ -23,3 +23,8 @@ import csv
 # open csv file ans save as dataframe
 df_clients = pd.read_csv('clients_final.csv',encoding="cp1250", sep=",", low_memory=False)
 df_orders = pd.read_csv('orders_final.csv',encoding="cp1250", sep=",", low_memory=False)
+
+# Analysis of abUser column
+abUser_unique = df_clients['abUser'].unique() # 99 is not present here (just NaN)
+txt = "Unique values in abUser: {}"
+print(txt.format(abUser_unique))
