@@ -28,3 +28,26 @@ df_orders = pd.read_csv('orders_final.csv',encoding="cp1250", sep=",", low_memor
 abUser_unique = df_clients['abUser'].unique() # 99 is not present here (just NaN)
 txt = "Unique values in abUser: {}"
 print(txt.format(abUser_unique))
+
+
+# •	What about the users with an unassigned group? Bambino thinks the test is fine if their share is below 0.5%. 
+reco_count = df_clients['abUser'][df_clients['abUser']==1].count()
+control_count = df_clients['abUser'][df_clients['abUser']==2].count()
+other_count = (df_clients['abUser']).isna().sum()
+
+percent = other_count/((reco_count + control_count + other_count))*100
+
+
+if percent < 0.5:
+    print("The test is fine, share is below 0.5%.")
+    print("Percent of users with an unassigned group: {:.2f}%".format(percent))
+else:
+    print("The test is not fine, share is {:.2f}%".format(percent))
+
+# •	What about the orders that are not in GA data? What is their share? How do you propose to handle them?
+df_join = df_clients.merge(df_orders, on='orderNumber', how='inner') # inner join
+df_join_count = df_join['orderNumber'].count() # number of common orders in both dataframes
+df_clients_count = df_clients['orderNumber'].count() # number of orders in df_clients
+share = 1-(df_join_count/df_clients_count) # share of orders that are not in GA data
+
+print("Share of orders that are not in GA data: {:.2f}%".format(share*100))
