@@ -51,3 +51,21 @@ df_clients_count = df_clients['orderNumber'].count() # number of orders in df_cl
 share = 1-(df_join_count/df_clients_count) # share of orders that are not in GA data
 
 print("Share of orders that are not in GA data: {:.2f}%".format(share*100))
+
+#•	Does the “reco group” earn, on average, a greater revenue? Does it have larger orders? 
+# Propose appropriate metrics and visualize them. Is there any other metric you may wish to evaluate?
+
+# reco group =  abUser == 1
+# control group = abUser == 2
+
+reco_mean = df_join['revenue'][df_join['abUser']==1].mean() 
+control_mean = df_join['revenue'][df_join['abUser']==2].mean()
+
+
+if reco_mean > control_mean:
+    print("The reco group earns, on average, a greater revenue.")
+else:
+    print("The reco group does not earn, on average, a greater revenue.")
+
+print("The average revenue of reco group is {:.2f} and the average revenue of control group is {:.2f}".format(reco_mean, control_mean))
+    
