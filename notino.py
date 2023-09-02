@@ -68,4 +68,9 @@ else:
     print("The reco group does not earn, on average, a greater revenue.")
 
 print("The average revenue of reco group is {:.2f} and the average revenue of control group is {:.2f}".format(reco_mean, control_mean))
-    
+
+reco_quantity_mean = df_join['quantity'][df_join['abUser']==1].mean() 
+ceontrol_quantity_mean = df_join['quantity'][df_join['abUser']==2].mean()
+
+print(reco_quantity_mean)
+print(ceontrol_quantity_mean)
