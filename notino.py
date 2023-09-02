@@ -159,3 +159,15 @@ result2 = pg.ttest(data_reco_without_outliers2,
                   data_control_without_outliers2,
                   correction=True)
 print(result2)
+
+# Boxplot for revenue
+sns.boxplot(data=df_join_without_outliers, x='abUser', y='revenue')
+plt.ylabel("Revenue")
+plt.title("Box Plot for Reco and Control Group - Revenue")
+plt.show()
+
+# Boxplot for quantity
+sns.boxplot(data=df_join_without_outliers, x='abUser', y='quantity')
+plt.ylabel("Number of items in the order")
+plt.title("Box Plot for Reco and Control Group - Quantity")
+plt.show()
