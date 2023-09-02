@@ -69,6 +69,7 @@ plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_joi
 plt.xlabel('Quantity')
 plt.ylabel('Revenue')
 plt.legend(['reco group', 'control group'])
+plt.title('Distruibution of revenue and quantity for reco and control group')
 plt.show()
 
 ### detected outliner, which does not change the mean quantity result
@@ -77,11 +78,13 @@ reco_max = df_join['revenue'][df_join['abUser']==1].idxmax()
 
 df_join_without_outliers = df_join.drop(reco_max)
 
+# Plot of distribution without outliers
 plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1], alpha=0.5, marker='o')
 plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2], alpha=0.5, marker = "x")
 plt.xlabel('Quantity')
 plt.ylabel('Revenue')
 plt.legend(['reco group', 'control group'])
+plt.title('Distruibution of revenue and quantity for reco and control group without outliers')
 plt.show()
 
 # T-test for independent samples unpair
@@ -170,4 +173,35 @@ plt.show()
 sns.boxplot(data=df_join_without_outliers, x='abUser', y='quantity')
 plt.ylabel("Number of items in the order")
 plt.title("Box Plot for Reco and Control Group - Quantity")
+plt.show()
+
+# Histogram for quantity
+plt.hist(x = df_join['quantity'][df_join['abUser']==1], bins = 100,  alpha = 0.5, label = 'reco group')
+plt.hist(x = df_join['quantity'][df_join['abUser']==2], bins = 100,  alpha = 0.5, label = 'control group')
+plt.xlabel('Quantity')
+plt.ylabel('Frequency')
+plt.legend(['reco group', 'control group'])
+plt.title('Histogram of quantity for reco and control group')
+plt.show()
+
+# Visualization of average revenue by quantity
+grouped_data = df_join_without_outliers.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
+
+ax = grouped_data.plot(kind='bar', alpha=0.7)
+ax.set_title('Average revenue by quantity')
+ax.set_ylabel('Average revenue')
+ax.set_xlabel('Quantity')
+ax.legend(['reco group', 'control group'])
+plt.show()
+
+
+# Visualization of average revenue by quantity for most common quantity
+filtered_df = df_join_without_outliers[df_join_without_outliers['quantity'].between(1, 10)]
+grouped_data_filtered = filtered_df.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
+
+ax = grouped_data_filtered.plot(kind='bar', alpha=0.7)
+ax.set_title('Average revenue by quantity')
+ax.set_ylabel('Average revenue')
+ax.set_xlabel('Quantity')
+ax.legend(['reco group', 'control group'])
 plt.show()
