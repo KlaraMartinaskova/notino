@@ -9,6 +9,8 @@ from matplotlib import pyplot as plt
 import pandas as pd
 import seaborn as sns
 import numpy as np
+import scipy.stats as stats
+import pingouin as pg
 import zipfile
 import os
 import csv
@@ -61,16 +63,49 @@ print("Share of orders that are not in GA data: {:.2f}%".format(share*100))
 reco_mean = df_join['revenue'][df_join['abUser']==1].mean() 
 control_mean = df_join['revenue'][df_join['abUser']==2].mean()
 
+# plot relationship between quantity and revenue
+plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker = "x")
+plt.xlabel('Quantity')
+plt.ylabel('Revenue')
+plt.legend(['reco group', 'control group'])
+plt.show()
 
-if reco_mean > control_mean:
-    print("The reco group earns, on average, a greater revenue.")
-else:
-    print("The reco group does not earn, on average, a greater revenue.")
+### detected outliner, which does not change the mean quantity result
 
-print("The average revenue of reco group is {:.2f} and the average revenue of control group is {:.2f}".format(reco_mean, control_mean))
+reco_max = df_join['revenue'][df_join['abUser']==1].idxmax()
 
-reco_quantity_mean = df_join['quantity'][df_join['abUser']==1].mean() 
-ceontrol_quantity_mean = df_join['quantity'][df_join['abUser']==2].mean()
+df_join_without_outliers = df_join.drop(reco_max)
 
-print(reco_quantity_mean)
-print(ceontrol_quantity_mean)
+plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2], alpha=0.5, marker = "x")
+plt.xlabel('Quantity')
+plt.ylabel('Revenue')
+plt.legend(['reco group', 'control group'])
+plt.show()
+
+# T-test for independent samples unpair
+
+# For data without outliers
+data_reco_without_outliers1 = df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1]
+data_control_without_outliers1 = df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2]
+
+# Two ways to calculate t-test
+stats.ttest_ind(a=data_reco_without_outliers1, b=data_control_without_outliers1 , equal_var=True)
+
+result = pg.ttest(data_reco_without_outliers1,
+                  data_control_without_outliers1,
+                  correction=True)
+print(result)
+
+
+data_reco_without_outliers2 = df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1]
+data_control_without_outliers2 = df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2]
+
+# Two ways to calculate t-test
+stats.ttest_ind(a=data_reco_without_outliers2, b=data_control_without_outliers2, equal_var=True)
+
+result = pg.ttest(data_reco_without_outliers2,
+                  data_control_without_outliers2,
+                  correction=True)
+print(result)
