@@ -205,3 +205,39 @@ ax.set_ylabel('Average revenue')
 ax.set_xlabel('Quantity')
 ax.legend(['reco group', 'control group'])
 plt.show()
+
+### Diference between country
+
+# Number of orders by country
+grouped_data_by_country = df_join_without_outliers.groupby(['country_y'])['quantity'].count()
+ax = grouped_data_by_country.plot(kind='bar', alpha=0.7)
+ax.set_title("Number of orders by country")
+ax.set_ylabel('Number of makings orders')
+ax.set_xlabel('country')
+plt.show()
+
+# Frequency of revenue by country
+plt.hist(x = df_join_without_outliers['revenue'][df_join['country_y']=="CH"], bins = 100,  alpha = 0.5, label = 'ch')
+plt.hist(x = df_join_without_outliers['revenue'][df_join['country_y']=="NE"], bins = 100,  alpha = 0.5, label = 'ne')
+plt.xlabel('Revenue')
+plt.ylabel('Frequency')
+plt.legend()
+plt.title('Histogram of revenue by country')
+plt.show()
+
+# Frequency of quantity by country
+plt.hist(x = df_join_without_outliers['quantity'][df_join['country_y']=="CH"], bins = 100,  alpha = 0.5, label = 'ch')
+plt.hist(x = df_join_without_outliers['quantity'][df_join['country_y']=="NE"], bins = 100,  alpha = 0.5, label = 'ne')
+plt.xlabel('Quantity')
+plt.ylabel('Frequency')
+plt.legend()
+plt.title('Histogram of quantity by country')
+plt.show()
+
+# Boxplot for quantity
+sns.boxplot(data=df_join_without_outliers, x='country_y', y='quantity')
+plt.ylabel("Number of items in the order")
+plt.title("Box Plot for country - Quantity")
+plt.show()
+
+
