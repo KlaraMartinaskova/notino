@@ -85,27 +85,77 @@ plt.legend(['reco group', 'control group'])
 plt.show()
 
 # T-test for independent samples unpair
-
 # For data without outliers
+
+# from https://www.geeksforgeeks.org/how-to-perform-an-f-test-in-python/
+
+def f_test(group1, group2):
+    f = np.var(group1, ddof=1)/np.var(group2, ddof=1)
+    nun = group1.size-1
+    dun = group2.size-1
+    p_value = 1-stats.f.cdf(f, nun, dun)
+    return f, p_value
+
+### For revenue
+print("T-test for revenue without outliners: ")
+print("")
+
 data_reco_without_outliers1 = df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1]
 data_control_without_outliers1 = df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2]
 
+# Shapiro-wilk test - Normality test:
+test_normality_reco_revenue = stats.shapiro(data_reco_without_outliers1 )
+test_normality_control_revenue = stats.shapiro(data_control_without_outliers1)
+print("Shapiro-wilk test - Normality test: ")
+print(test_normality_reco_revenue)
+print(test_normality_control_revenue)
+print("")
+
+# perform F-test - Homogeneity test
+reco_ftest = f_test(data_reco_without_outliers1, data_control_without_outliers1)
+print("F-test - Homogeneity test: ")
+print(reco_ftest)
+print("")
+
 # Two ways to calculate t-test
-stats.ttest_ind(a=data_reco_without_outliers1, b=data_control_without_outliers1 , equal_var=True)
+
+result_stats = stats.ttest_ind(a=data_reco_without_outliers1, b=data_control_without_outliers1 , equal_var=True)
+print(result_stats)
+print("")
 
 result = pg.ttest(data_reco_without_outliers1,
                   data_control_without_outliers1,
                   correction=True)
 print(result)
+print("---------------------------------")
 
-
+### For quantity
+print("T-test for quantity without outliners: ")
+print("")
 data_reco_without_outliers2 = df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1]
 data_control_without_outliers2 = df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2]
 
-# Two ways to calculate t-test
-stats.ttest_ind(a=data_reco_without_outliers2, b=data_control_without_outliers2, equal_var=True)
+# Shapiro-wilk test - Normality test:
+test_normality_reco_quantity = stats.shapiro(data_reco_without_outliers2)
+test_normality_control_quantity = stats.shapiro(data_control_without_outliers2)
+print("Shapiro-wilk test - Normality test: ")
+print(test_normality_reco_quantity)
+print(test_normality_control_quantity)
+print("")
 
-result = pg.ttest(data_reco_without_outliers2,
+# perdom F test - Homogeneity test
+control_ftest = f_test(data_reco_without_outliers2,data_control_without_outliers2)
+print("F-test - Homogeneity test: ")
+print(control_ftest)
+print("")
+
+# Two ways to calculate t-test
+result_stats2 = stats.ttest_ind(a=data_reco_without_outliers2, b=data_control_without_outliers2, equal_var=True)
+
+print(result_stats2)
+print("")
+
+result2 = pg.ttest(data_reco_without_outliers2,
                   data_control_without_outliers2,
                   correction=True)
-print(result)
+print(result2)
