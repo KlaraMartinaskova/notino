@@ -63,6 +63,10 @@ df_clients_ne = correct_period(df_clients_ne, start_date, end_date) # data in co
 df_clients_ch = df_clients_ch.sort_values(by=['date'])
 df_clients_ne = df_clients_ne.sort_values(by=['date'])
 
+# Save raw data
+df_clients_ch_raw = df_clients_ch.copy()
+df_clients_ne_raw = df_clients_ne.copy()
+
 # Drop duplicated client id and keep the first one
 df_clients_ch = df_clients_ch.drop_duplicates(subset=['clientID'], keep='first')
 df_clients_ne = df_clients_ne.drop_duplicates(subset=['clientID'], keep='first')
@@ -152,62 +156,242 @@ else:
 print("---------------------------------")
 ################################################################################################################
 #### •	What about the users with an unassigned group? Bambino thinks the test is fine if their share is below 0.5%. 
-# First method
-def unassigned_share(df_clients):
-    reco_count = df_clients['abUser'][df_clients['abUser']==1].count()
-    control_count = df_clients['abUser'][df_clients['abUser']==2].count()
-    other_count = (df_clients['abUser']).isna().sum()
-    percent = other_count/((reco_count + control_count + other_count))*100
+# First method without statistical test
+def unassigned_share(df):
+    reco_count = df['abUser'][df['abUser']==1].count()
+    control_count = df['abUser'][df['abUser']==2].count()
+    unassigned_count = df['abUser'][(df['abUser']!=1) & (df['abUser']!=2)].count()
+    percent = unassigned_count/((reco_count + control_count + unassigned_count))*100
 
     if percent < 0.5:
-        print("The test is fine, share is below 0.5%.")
-        print("Percent of users with an unassigned group: {:.2f}%".format(percent))
+        print("\tThe test is fine, share is below 0.5%.")
+        print("\tPercent of users with an unassigned group: {:.2f}%".format(percent))
     else:
-        print("The test is not fine, share is {:.2f}%".format(percent))
+        print("\tThe test is not fine, share is {:.2f}%".format(percent))
 
     return percent
 
+print("Share of users with an unassigned group for CH: ")
 share_ch = unassigned_share(df_clients_ch)
+
+print("Share of users with an unassigned group for NE: ")
 share_ne = unassigned_share(df_clients_ne)
 
-# Second method with binomial test
-def binomial_test(df_group1,df_group2, expected_proportion, alt):
-    observed_success = len(df_group1)
-    total_items = len(df_group1) + len(df_group2)
-    binom = stats.binomtest(observed_success, total_items, expected_proportion, alternative=alt)
-    p_value = stats.binom_test(observed_success, total_items, expected_proportion, alternative=alt)
-    return p_value, binom
-
+# Second method with statistical test
+share_unassigned = 0.005
 # CH
 assigned_group_ch = df_clients_ch['abUser'][(df_clients_ch['abUser']==1) | (df_clients_ch['abUser']==2)]
-unassigned_group_ch = df_clients_ch[(df_clients_ch['abUser']).isna()]
-p_value_ch, binom_ch = binomial_test(unassigned_group_ch, assigned_group_ch, 0.005, 'less')
+unassigned_group_ch = df_clients_ch['abUser'][(df_clients_ch['abUser']!=1) & (df_clients_ch['abUser']!=2)]
+binom_ch = binomial_test(unassigned_group_ch, assigned_group_ch, share_unassigned, 'less')
 
-print(f"Binomial test: {binom_ch}")
-print(f"P-value: {p_value_ch}")
+print(f"Binomial test for CH: \n\t{binom_ch}")
+if binom_ch.pvalue < 0.05:
+    print("\tThe test is significant.")
+else:
+    print("\tThe test is not significant.")
 
 # NE
 assigned_group_ne = df_clients_ne['abUser'][(df_clients_ne['abUser']==1) | (df_clients_ne['abUser']==2)]
-unassigned_group_ne = df_clients_ne[(df_clients_ne['abUser']).isna()]
-p_value_ne, binom_ne= binomial_test(unassigned_group_ne, assigned_group_ne, 0.005, 'less')
+unassigned_group_ne = df_clients_ne['abUser'][(df_clients_ne['abUser']!=1) & (df_clients_ne['abUser']!=2)]
+binom_ne= binomial_test(unassigned_group_ne, assigned_group_ne, share_unassigned, 'less')
 
-print(f"Binomial test for NE: {binom_ne}")
-print(f"P-value: {p_value_ne}")
+print(f"Binomial test for NE: \n\t{binom_ne}")
+if binom_ne.pvalue < 0.05:
+    print("\tThe test is significan.t")
+else:
+    print("\tThe test is not significant.")
+
 print("---------------------------------")
+################################################################################################################
+### Drop unassigned user record
+df_clients_ch = df_clients_ch[(df_clients_ch['abUser']==1) | (df_clients_ch['abUser']==2)]
+df_clients_ne = df_clients_ne[(df_clients_ne['abUser']==1) | (df_clients_ne['abUser']==2)]
+
+df_clients_ch_raw = df_clients_ch_raw[(df_clients_ch_raw['abUser']==1) | (df_clients_ch_raw['abUser']==2)]
+df_clients_ne_raw = df_clients_ne_raw[(df_clients_ne_raw['abUser']==1) | (df_clients_ne_raw['abUser']==2)]
+
 ################################################################################################################
 ### •	What about the orders that are not in GA data? What is their share? How do you propose to handle them?
 # CH
-df_join_ch = df_clients_ch.merge(df_orders_ch, on="orderNumber", how="inner") # join tables (inner join)
+df_join_ch = df_clients_ch_raw.merge(df_orders_ch, on="orderNumber", how="inner") # join tables (inner join)
 share_orders_not_in_GA_ch = 1-(len(df_join_ch) / len(df_orders_ch)) # share of orders not in GA
 
 print("Share of orders that are not in GA data for CH: {:.2f}%".format(share_orders_not_in_GA_ch *100))
 
 # NE
-df_join_ne = df_clients_ne.merge(df_orders_ne, on="orderNumber", how="inner") # join tables (inner join)
+df_join_ne = df_clients_ne_raw.merge(df_orders_ne, on="orderNumber", how="inner") # join tables (inner join)
 share_orders_not_in_GA_ne = 1-(len(df_join_ne) / len(df_orders_ne)) # share of orders not in GA
 
-print("Share of orders that are not in GA data for CH: {:.2f}%".format(share_orders_not_in_GA_ne *100))
+print("Share of orders that are not in GA data for NE: {:.2f}%".format(share_orders_not_in_GA_ne *100))
 print("---------------------------------")
+################################################################################################################
+#  •	Does the “reco group” earn, on average, a greater revenue? Does it have larger orders? 
+# Propose appropriate metrics and visualize them. Is there any other metric you may wish to evaluate?
+
+# reco group:  abUser == 1
+# control group: abUser == 2 
+
+def t_test(group1, group2):
+    ttest_result = stats.ttest_ind(a=group1, b=group1 , equal_var=True)
+    print('\tT-test p-value: ', ttest_result.pvalue)
+        
+    if ttest_result.pvalue < 0.05:
+        print('\tThe difference between the two groups is statistically significant.')
+    else:
+        print('\tThe difference between the two groups is not statistically significant.')
+################################################################################################################
+### Check the distribution of the data for quantity and revenue
+
+# CH
+df_join = df_join_ch
+plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker ='o')
+plt.xlabel('Quantity - number of items in the order')
+plt.ylabel('Revenue [EUR]')
+plt.legend(['Reco Group', 'Control Group'])
+plt.title('Distruibution of revenue and quantity \n for reco and control group for country CH')
+plt.show()
+
+# NE
+df_join = df_join_ne
+plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker ='o')
+plt.xlabel('Quantity - number of items in the order')
+plt.ylabel('Revenue [EUR]')
+plt.legend(['Reco Group', 'Control Group'])
+plt.title('Distruibution of revenue and quantity \n for reco and control for country NE')
+plt.show()
+
+### Drop outlier from NE dataframe
+reco_max = df_join_ne['revenue'][df_join_ne['abUser']==1].idxmax()
+#df_join_ne_with_outlier = df_join_ne.copy()
+df_join_ne = df_join_ne.drop(reco_max) # redefine dataframe without outlier
+
+# Plot of distribution without outlier
+df_join = df_join_ne
+plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker ='o')
+plt.xlabel('Quantity - number of items in the order')
+plt.ylabel('Revenue [EUR]')
+plt.legend(['Reco Group', 'Control Group'])
+plt.title('Distruibution of revenue and quantity \n for reco and control for country NE without outlier')
+plt.show()
+################################################################################################################
+### Boxplots
+### CH 
+# Boxplot for revenue
+sns.boxplot(data=df_join_ch, x='abUser', y='revenue')
+plt.ylabel("Revenue [EUR]")
+plt.title("Country CH \nBox Plot for Reco and Control Group - Revenue")
+plt.xticks([0, 1], ['Reco Group', 'Control Group'])
+plt.show()
+
+# Boxplot for quantity
+sns.boxplot(data=df_join_ne, x='abUser', y='quantity')
+plt.ylabel("Number of items in the order")
+plt.title("Country CH \nBox Plot for Reco and Control Group - Quantity")
+plt.xticks([0, 1], ['Reco Group', 'Control Group'])
+plt.show()
+
+
+### NE
+# Boxplot for revenue
+sns.boxplot(data=df_join_ne, x='abUser', y='revenue')
+plt.ylabel("Revenue [EUR]")
+plt.title("Country NE \nBox Plot for Reco and Control Group - Revenue")
+plt.xticks([0, 1], ['Reco Group', 'Control Group'])
+plt.show()
+
+# Boxplot for quantity
+sns.boxplot(data=df_join_ne, x='abUser', y='quantity')
+plt.ylabel("Number of items in the order")
+plt.title("Country NE \nBox Plot for Reco and Control Group - Quantity")
+plt.xticks([0, 1], ['Reco Group', 'Control Group'])
+plt.show()
+################################################################################################################
+### CH
+df_join = df_join_ch
+
+# Histogram for quantity
+plt.hist(x = df_join['quantity'][df_join['abUser']==1], bins = 100,  alpha = 0.5, label = 'reco group')
+plt.hist(x = df_join['quantity'][df_join['abUser']==2], bins = 100,  alpha = 0.5, label = 'control group')
+plt.xlabel('Quantity - number of items in the order')
+plt.ylabel('Frequency')
+plt.legend(['Reco Group', 'Control Group'])
+plt.title('Country CH \nHistogram of quantity for reco and control group')
+plt.show()
+
+# Histogram for revenue
+plt.hist(x = df_join['revenue'][df_join['abUser']==1], bins = 100,  alpha = 0.5, label = 'reco group')
+plt.hist(x = df_join['revenue'][df_join['abUser']==2], bins = 100,  alpha = 0.5, label = 'control group')
+plt.xlabel('Revenue [EUR]')
+plt.ylabel('Frequency')
+plt.legend(['Reco Group', 'Control Group'])
+plt.title('Country CH \nHistogram of quantity for reco and control group')
+plt.show()
+
+# Visualization of average revenue by quantity
+grouped_data = df_join.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
+
+ax = grouped_data.plot(kind='bar', alpha=0.7)
+ax.set_title('Country CH \nAverage item revenue by order size')
+ax.set_ylabel('Average item price [EUR]')
+ax.set_xlabel('Quantity - number of items in the order')
+plt.legend(['Reco Group', 'Control Group'])
+plt.show()
+
+# Visualization of average revenue by quantity for most common quantity
+filtered_df = df_join[df_join['quantity'].between(1, 10)]
+grouped_data_filtered = filtered_df.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
+
+ax = grouped_data_filtered.plot(kind='bar', alpha=0.7)
+ax.set_title('Country CH \nAverage item revenue by order size')
+ax.set_ylabel('Average item price [EUR]')
+ax.set_xlabel('Quantity - number of items in the order')
+plt.legend(['Reco Group', 'Control Group'])
+plt.show()
+### NE
+df_join = df_join_ne
+
+# Histogram for quantity
+plt.hist(x = df_join['quantity'][df_join['abUser']==1], bins = 100,  alpha = 0.5, label = 'reco group')
+plt.hist(x = df_join['quantity'][df_join['abUser']==2], bins = 100,  alpha = 0.5, label = 'control group')
+plt.xlabel('Quantity - number of items in the order')
+plt.ylabel('Frequency')
+plt.legend(['Reco Group', 'Control Group'])
+plt.title('Country NE \nHistogram of quantity for reco and control group')
+plt.show()
+
+# Histogram for revenue
+plt.hist(x = df_join['revenue'][df_join['abUser']==1], bins = 100,  alpha = 0.5, label = 'reco group')
+plt.hist(x = df_join['revenue'][df_join['abUser']==2], bins = 100,  alpha = 0.5, label = 'control group')
+plt.xlabel('Revenue [EUR]')
+plt.ylabel('Frequency')
+plt.legend(['Reco Group', 'Control Group'])
+plt.title('Country NE \nHistogram of quantity for reco and control group')
+plt.show()
+
+# Visualization of average revenue by quantity
+grouped_data = df_join.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
+
+ax = grouped_data.plot(kind='bar', alpha=0.7)
+ax.set_title('Country NE \nAverage item revenue by order size')
+ax.set_ylabel('Average item price [EUR]')
+ax.set_xlabel('Quantity - number of items in the order')
+plt.legend(['Reco Group', 'Control Group'])
+plt.show()
+
+# Visualization of average revenue by quantity for most common quantity
+filtered_df = df_join[df_join['quantity'].between(1, 10)]
+grouped_data_filtered = filtered_df.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
+
+ax = grouped_data_filtered.plot(kind='bar', alpha=0.7)
+ax.set_title('Country NE \nAverage item revenue by order size')
+ax.set_ylabel('Average item price [EUR]')
+ax.set_xlabel('Quantity - number of items in the order')
+plt.legend(['Reco Group', 'Control Group'])
+plt.show()
+
 ################################################################################################################
 #  •	Does the “reco group” earn, on average, a greater revenue? Does it have larger orders? 
 # Propose appropriate metrics and visualize them. Is there any other metric you may wish to evaluate?
