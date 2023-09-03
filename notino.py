@@ -232,13 +232,43 @@ print("---------------------------------")
 # control group: abUser == 2 
 
 def t_test(group1, group2):
-    ttest_result = stats.ttest_ind(a=group1, b=group1 , equal_var=True)
+    ttest_result = stats.ttest_ind(a=group1, b=group2 , equal_var=True)
     print('\tT-test p-value: ', ttest_result.pvalue)
         
     if ttest_result.pvalue < 0.05:
         print('\tThe difference between the two groups is statistically significant.')
     else:
         print('\tThe difference between the two groups is not statistically significant.')
+    return ttest_result
+
+### Test for Revenue
+print("Test if the “reco group” earn, on average, a greater revenue: ")
+# CH
+df_reco = df_join_ch['revenue'][df_join_ch['abUser']==1]
+df_control = df_join_ch['revenue'][df_join_ch['abUser']==2]
+print("Test for country CH: ")
+t_test(df_reco, df_control)
+
+# NE
+df_reco = df_join_ne['revenue'][df_join_ne['abUser']==1]
+df_control = df_join_ne['revenue'][df_join_ne['abUser']==2]
+print("Test for country NE: ")
+t_test(df_reco, df_control)
+
+### Test for Quantity
+print("Test if the “reco group” has larger order: ")
+# CH
+df_reco = df_join_ch['quantity'][df_join_ch['abUser']==1]
+df_control = df_join_ch['quantity'][df_join_ch['abUser']==2]
+print("Test for country CH: ")
+t_test(df_reco, df_control)
+
+# NE
+df_reco = df_join_ne['quantity'][df_join_ne['abUser']==1]
+df_control = df_join_ne['quantity'][df_join_ne['abUser']==2]
+print("Test for country NE: ")
+t_test(df_reco, df_control)
+
 ################################################################################################################
 ### Check the distribution of the data for quantity and revenue
 
@@ -309,6 +339,9 @@ plt.title("Country NE \nBox Plot for Reco and Control Group - Quantity")
 plt.xticks([0, 1], ['Reco Group', 'Control Group'])
 plt.show()
 ################################################################################################################
+### Histograms with frequency of occurence quantity and revenue for each gcountry
+### Contruction of plots with average item revenue by order size
+
 ### CH
 df_join = df_join_ch
 
@@ -350,6 +383,7 @@ ax.set_ylabel('Average item price [EUR]')
 ax.set_xlabel('Quantity - number of items in the order')
 plt.legend(['Reco Group', 'Control Group'])
 plt.show()
+
 ### NE
 df_join = df_join_ne
 
@@ -391,233 +425,3 @@ ax.set_ylabel('Average item price [EUR]')
 ax.set_xlabel('Quantity - number of items in the order')
 plt.legend(['Reco Group', 'Control Group'])
 plt.show()
-
-################################################################################################################
-#  •	Does the “reco group” earn, on average, a greater revenue? Does it have larger orders? 
-# Propose appropriate metrics and visualize them. Is there any other metric you may wish to evaluate?
-
-# reco group =  abUser == 1
-# control group = abUser == 2
-
-def f_test(group1, group2):
-    f = np.var(group1, ddof=1)/np.var(group2, ddof=1)
-    nun = group1.size-1
-    dun = group2.size-1
-    p_value = 1-stats.f.cdf(f, nun, dun)
-    return f, p_value
-
-### Check the distribution of the data for quantity and revenue
-df_join = df_join_ch
-plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
-plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker = "x")
-plt.xlabel('Quantity')
-plt.ylabel('Revenue')
-plt.legend(['reco group', 'control group'])
-plt.title('Distruibution of revenue and quantity for reco and control group for country CH')
-plt.show()
-
-df_join = df_join_ne
-plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
-plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker = "x")
-plt.xlabel('Quantity')
-plt.ylabel('Revenue')
-plt.legend(['reco group', 'control group'])
-plt.title('Distruibution of revenue and quantity for reco and control for country NE')
-plt.show()
-
-# Drop outliers from NE dataframe
-df_join_without_outliers = df_join_ne.drop(reco_max)
-
-# Plot of distribution without outliers
-plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1], alpha=0.5, marker='o')
-plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2], alpha=0.5, marker = "x")
-plt.xlabel('Quantity')
-plt.ylabel('Revenue')
-plt.legend(['reco group', 'control group'])
-plt.title('Distruibution of revenue and quantity for reco and control group without outliers for NE')
-plt.show()
-
-df_join_ne = df_join_without_outliers # refined dataframe
-
-###############
-reco_mean = df_join['revenue'][df_join['abUser']==1].mean() 
-control_mean = df_join['revenue'][df_join['abUser']==2].mean()
-
-# plot relationship between quantity and revenue
-plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
-plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker = "x")
-plt.xlabel('Quantity')
-plt.ylabel('Revenue')
-plt.legend(['reco group', 'control group'])
-plt.title('Distruibution of revenue and quantity for reco and control group')
-plt.show()
-
-### detected outliner, which does not change the mean quantity result
-
-reco_max = df_join['revenue'][df_join['abUser']==1].idxmax()
-
-df_join_without_outliers = df_join.drop(reco_max)
-
-# Plot of distribution without outliers
-plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1], alpha=0.5, marker='o')
-plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2], alpha=0.5, marker = "x")
-plt.xlabel('Quantity')
-plt.ylabel('Revenue')
-plt.legend(['reco group', 'control group'])
-plt.title('Distruibution of revenue and quantity for reco and control group without outliers')
-plt.show()
-
-# T-test for independent samples unpair
-# For data without outliers
-
-# from https://www.geeksforgeeks.org/how-to-perform-an-f-test-in-python/
-
-def f_test(group1, group2):
-    f = np.var(group1, ddof=1)/np.var(group2, ddof=1)
-    nun = group1.size-1
-    dun = group2.size-1
-    p_value = 1-stats.f.cdf(f, nun, dun)
-    return f, p_value
-
-### For revenue
-print("T-test for revenue without outliners: ")
-print("")
-
-data_reco_without_outliers1 = df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1]
-data_control_without_outliers1 = df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2]
-
-# Shapiro-wilk test - Normality test:
-test_normality_reco_revenue = stats.shapiro(data_reco_without_outliers1 )
-test_normality_control_revenue = stats.shapiro(data_control_without_outliers1)
-print("Shapiro-wilk test - Normality test: ")
-print(test_normality_reco_revenue)
-print(test_normality_control_revenue)
-print("")
-
-# perform F-test - Homogeneity test
-reco_ftest = f_test(data_reco_without_outliers1, data_control_without_outliers1)
-print("F-test - Homogeneity test: ")
-print(reco_ftest)
-print("")
-
-# Two ways to calculate t-test
-
-result_stats = stats.ttest_ind(a=data_reco_without_outliers1, b=data_control_without_outliers1 , equal_var=True)
-print(result_stats)
-print("")
-
-result = pg.ttest(data_reco_without_outliers1,
-                  data_control_without_outliers1,
-                  correction=True)
-print(result)
-print("---------------------------------")
-
-### For quantity
-print("T-test for quantity without outliners: ")
-print("")
-data_reco_without_outliers2 = df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1]
-data_control_without_outliers2 = df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2]
-
-# Shapiro-wilk test - Normality test:
-test_normality_reco_quantity = stats.shapiro(data_reco_without_outliers2)
-test_normality_control_quantity = stats.shapiro(data_control_without_outliers2)
-print("Shapiro-wilk test - Normality test: ")
-print(test_normality_reco_quantity)
-print(test_normality_control_quantity)
-print("")
-
-# perdom F test - Homogeneity test
-control_ftest = f_test(data_reco_without_outliers2,data_control_without_outliers2)
-print("F-test - Homogeneity test: ")
-print(control_ftest)
-print("")
-
-# Two ways to calculate t-test
-result_stats2 = stats.ttest_ind(a=data_reco_without_outliers2, b=data_control_without_outliers2, equal_var=True)
-
-print(result_stats2)
-print("")
-
-result2 = pg.ttest(data_reco_without_outliers2,
-                  data_control_without_outliers2,
-                  correction=True)
-print(result2)
-
-# Boxplot for revenue
-sns.boxplot(data=df_join_without_outliers, x='abUser', y='revenue')
-plt.ylabel("Revenue")
-plt.title("Box Plot for Reco and Control Group - Revenue")
-plt.show()
-
-# Boxplot for quantity
-sns.boxplot(data=df_join_without_outliers, x='abUser', y='quantity')
-plt.ylabel("Number of items in the order")
-plt.title("Box Plot for Reco and Control Group - Quantity")
-plt.show()
-
-# Histogram for quantity
-plt.hist(x = df_join['quantity'][df_join['abUser']==1], bins = 100,  alpha = 0.5, label = 'reco group')
-plt.hist(x = df_join['quantity'][df_join['abUser']==2], bins = 100,  alpha = 0.5, label = 'control group')
-plt.xlabel('Quantity')
-plt.ylabel('Frequency')
-plt.legend(['reco group', 'control group'])
-plt.title('Histogram of quantity for reco and control group')
-plt.show()
-
-# Visualization of average revenue by quantity
-grouped_data = df_join_without_outliers.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
-
-ax = grouped_data.plot(kind='bar', alpha=0.7)
-ax.set_title('Average revenue by quantity')
-ax.set_ylabel('Average revenue')
-ax.set_xlabel('Quantity')
-ax.legend(['reco group', 'control group'])
-plt.show()
-
-
-# Visualization of average revenue by quantity for most common quantity
-filtered_df = df_join_without_outliers[df_join_without_outliers['quantity'].between(1, 10)]
-grouped_data_filtered = filtered_df.groupby(['quantity', 'abUser'])['revenue'].mean().unstack()
-
-ax = grouped_data_filtered.plot(kind='bar', alpha=0.7)
-ax.set_title('Average revenue by quantity')
-ax.set_ylabel('Average revenue')
-ax.set_xlabel('Quantity')
-ax.legend(['reco group', 'control group'])
-plt.show()
-
-### Diference between country
-
-# Number of orders by country
-grouped_data_by_country = df_join_without_outliers.groupby(['country_y'])['quantity'].count()
-ax = grouped_data_by_country.plot(kind='bar', alpha=0.7)
-ax.set_title("Number of orders by country")
-ax.set_ylabel('Number of makings orders')
-ax.set_xlabel('country')
-plt.show()
-
-# Frequency of revenue by country
-plt.hist(x = df_join_without_outliers['revenue'][df_join['country_y']=="CH"], bins = 100,  alpha = 0.5, label = 'ch')
-plt.hist(x = df_join_without_outliers['revenue'][df_join['country_y']=="NE"], bins = 100,  alpha = 0.5, label = 'ne')
-plt.xlabel('Revenue')
-plt.ylabel('Frequency')
-plt.legend()
-plt.title('Histogram of revenue by country')
-plt.show()
-
-# Frequency of quantity by country
-plt.hist(x = df_join_without_outliers['quantity'][df_join['country_y']=="CH"], bins = 100,  alpha = 0.5, label = 'ch')
-plt.hist(x = df_join_without_outliers['quantity'][df_join['country_y']=="NE"], bins = 100,  alpha = 0.5, label = 'ne')
-plt.xlabel('Quantity')
-plt.ylabel('Frequency')
-plt.legend()
-plt.title('Histogram of quantity by country')
-plt.show()
-
-# Boxplot for quantity
-sns.boxplot(data=df_join_without_outliers, x='country_y', y='quantity')
-plt.ylabel("Number of items in the order")
-plt.title("Box Plot for country - Quantity")
-plt.show()
-
-
