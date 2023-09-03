@@ -93,26 +93,35 @@ def binomial_test(df_group1,df_group2, expected_proportion, alt):
 def filter_day_and_abUser (df,day, abUser):
     return df[(df['date'] == unique_days[day]) & (df['abUser'] == abUser)]
 
+def check_share_of_abUser_each_day (df,unique_days):
+    for day in range(len(unique_days)):
+        df_current_day_reco = filter_day_and_abUser(df,day,1)
+        df_current_day_control = filter_day_and_abUser(df,day,2)
+        share = 0.5
+        p_value,binom_test = binomial_test(df_current_day_reco, df_current_day_control, share, "two-sided")
+
+        if p_value < 0.05:
+            print(f"Day {unique_days[day]} is significant")
+
 ### Test for each day
 
 # CH
 unique_days = df_clients_ch['date'].unique()
 
-for day in range(len(unique_days)):
-    df_current_day_reco = filter_day_and_abUser(df_clients_ch,day,1)
-    df_current_day_control = filter_day_and_abUser(df_clients_ch,day,2)
-    share = 0.5
-    p_value,binom_test = binomial_test(df_current_day_reco, df_current_day_control, share, "two-sided")
-
-    if p_value < 0.05:
-        print(f"Day {unique_days[day]} is significant")
-
+print("Significant p-values for CH (if any): ")
+check_share_of_abUser_each_day(df_clients_ch,unique_days)
 
 # NE
 unique_days = df_clients_ne['date'].unique()
 
+print("Significant p-values for NE (if any): ")
+check_share_of_abUser_each_day(df_clients_ne,unique_days)
+
+
 ### Test for whole period
+
 share = 0.5
+
 # CH
 df_clients_ch_reco = df_clients_ch['abUser'][df_clients_ch['abUser']==1]
 df_clients_ch_control = df_clients_ch['abUser'][df_clients_ch['abUser']==2]
