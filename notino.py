@@ -31,21 +31,73 @@ abUser_unique = df_clients['abUser'].unique() # 99 is not present here (just NaN
 txt = "Unique values in abUser: {}"
 print(txt.format(abUser_unique))
 
+# Devided into two groups by country
+df_clients_ch = df_clients[df_clients['country']=="CH"]
+df_clients_ne = df_clients[df_clients['country']=="NE"]
 
-# •	What about the users with an unassigned group? Bambino thinks the test is fine if their share is below 0.5%. 
-reco_count = df_clients['abUser'][df_clients['abUser']==1].count()
-control_count = df_clients['abUser'][df_clients['abUser']==2].count()
-other_count = (df_clients['abUser']).isna().sum()
+################################################################################################################
+####Check the date
+# •	Is the test running for the correct period?
+def correct_period(df, start_date, end_date):
+    df['date'] = pd.to_datetime(df['date'])
+    filtered_df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+    filtered_df['date'] = filtered_df['date'].dt.strftime('%Y-%m-%d')
+    return filtered_df
 
-percent = other_count/((reco_count + control_count + other_count))*100
+start_date = datetime(2023, 5, 17)
+end_date = datetime(2023, 6, 16)
+
+df_clients_ch = correct_period(df_clients_ch, start_date, end_date)
+df_clients_ne = correct_period(df_clients_ne, start_date, end_date)
+################################################################################################################
+# Analysis of abUser column
+abUser_unique = df_clients['abUser'].unique() # 99 is not present here (just NaN)
+txt = "Unique values in abUser: {}"
+print(txt.format(abUser_unique))
+################################################################################################################
+#### •	What about the users with an unassigned group? Bambino thinks the test is fine if their share is below 0.5%. 
+# First method
+def unassigned_share(df_clients):
+    reco_count = df_clients['abUser'][df_clients['abUser']==1].count()
+    control_count = df_clients['abUser'][df_clients['abUser']==2].count()
+    other_count = (df_clients['abUser']).isna().sum()
+    percent = other_count/((reco_count + control_count + other_count))*100
+
+    if percent < 0.5:
+        print("The test is fine, share is below 0.5%.")
+        print("Percent of users with an unassigned group: {:.2f}%".format(percent))
+    else:
+        print("The test is not fine, share is {:.2f}%".format(percent))
+
+    return percent
+
+share_ch = unassigned_share(df_clients_ch)
+share_ne = unassigned_share(df_clients_ne)
+
+# Second method with binomial test
+def binomial_test(df_group1,df_group2, expected_proportion, alt ):
+    observed_success = len(df_group1)
+    total_items = len(df_group1) + len(df_group2)
+    binom = stats.binomtest(observed_success, total_items, expected_proportion, alternative=alt)
+    p_value = stats.binom_test(observed_success, total_items, expected_proportion, alternative=alt)
+    print(f"Binomial test: {binom}")
+    print(f"P-value: {p_value}")
+    return p_value
+
+# CH
+assigned_group_ch = df_clients_ch['abUser'][(df_clients_ch['abUser']==1) | (df_clients_ch['abUser']==2)]
+unassigned_group_ch = df_clients_ch[(df_clients_ch['abUser']).isna()]
+p_value_ch = binomial_test(unassigned_group_ch, assigned_group_ch, 0.005, 'less')
+print(p_value_ch)
+
+# NE
+assigned_group_ne = df_clients_ne['abUser'][(df_clients_ne['abUser']==1) | (df_clients_ne['abUser']==2)]
+unassigned_group_ne = df_clients_ne[(df_clients_ne['abUser']).isna()]
+p_value_ne = binomial_test(unassigned_group_ne, assigned_group_ne, 0.005, 'less')
+print(p_value_ne)
 
 
-if percent < 0.5:
-    print("The test is fine, share is below 0.5%.")
-    print("Percent of users with an unassigned group: {:.2f}%".format(percent))
-else:
-    print("The test is not fine, share is {:.2f}%".format(percent))
-
+################################################################################################################
 # •	What about the orders that are not in GA data? What is their share? How do you propose to handle them?
 df_join = df_clients.merge(df_orders, on='orderNumber', how='inner') # inner join
 df_join_count = df_join['orderNumber'].count() # number of common orders in both dataframes
