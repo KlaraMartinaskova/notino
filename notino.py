@@ -38,8 +38,11 @@ print(txt.format(abUser_unique))
 df_clients_ch = df_clients[df_clients['country']=="CH"]
 df_clients_ne = df_clients[df_clients['country']=="NE"]
 
+df_orders_ch = df_orders[df_orders['country']=="CH"]
+df_orders_ne = df_orders[df_orders['country']=="NE"]
+
 ################################################################################################################
-####Check the date
+### Check the date
 # •	Is the test running for the correct period?
 def correct_period(df, start_date, end_date):
     df['date'] = pd.to_datetime(df['date'])
@@ -50,8 +53,17 @@ def correct_period(df, start_date, end_date):
 start_date = datetime(2023, 5, 17)
 end_date = datetime(2023, 6, 16)
 
-df_clients_ch = correct_period(df_clients_ch, start_date, end_date)
-df_clients_ne = correct_period(df_clients_ne, start_date, end_date)
+df_clients_ch = correct_period(df_clients_ch, start_date, end_date) # data in correct period
+df_clients_ne = correct_period(df_clients_ne, start_date, end_date) # data in correct period
+
+################################################################################################################
+### Delete duplicates and NaN
+
+df_orders_ch = df_orders_ch.drop_duplicates(subset=["orderNumber"], keep='first') # drop duplicates
+df_orders_ch= df_orders_ch.dropna(subset=["orderNumber"]) # drop NaN
+
+df_orders_ne = df_orders_ne.drop_duplicates(subset=["orderNumber"], keep='first') # drop duplicates 
+df_orders_ne= df_orders_ne.dropna(subset=["orderNumber"]) # drop NaN
 
 ################################################################################################################
 #### •	What about the users with an unassigned group? Bambino thinks the test is fine if their share is below 0.5%. 
@@ -97,29 +109,66 @@ print(p_value_ne)
 
 ################################################################################################################
 ### •	What about the orders that are not in GA data? What is their share? How do you propose to handle them?
-df_join_ch = df_clients_ch.merge(df_orders, on='orderNumber', how='inner') # inner join
-df_join_ne = df_clients_ne.merge(df_orders, on='orderNumber', how='inner') # inner join
+# CH
+df_join_ch = df_clients_ch.merge(df_orders_ch, on="orderNumber", how="inner") # join tables (inner join)
+share_orders_not_in_GA_ch = 1-(len(df_join_ch) / len(df_orders_ch)) # share of orders not in GA
 
+print("Share of orders that are not in GA data for CH: {:.2f}%".format(share_orders_not_in_GA_ch *100))
 
-df_join_count_ch = df_join_ch['orderNumber'].count() # number of common orders in both dataframes
-df_clients_ch_count = df_clients_ch['orderNumber'].count() # number of orders in df_clients
-share_ch = 1-(df_join_count_ch/df_clients_ch_count) # share of orders that are not in GA data
+# NE
+df_join_ne = df_clients_ne.merge(df_orders_ne, on="orderNumber", how="inner") # join tables (inner join)
+share_orders_not_in_GA_ne = 1-(len(df_join_ne) / len(df_orders_ne)) # share of orders not in GA
 
-print("Share of orders that are not in GA data for CH: {:.2f}%".format(share_ch*100))
-
-df_join_count_ne = df_join_ne['orderNumber'].count() # number of common orders in both dataframes
-df_clients_ne_count = df_clients_ne['orderNumber'].count() # number of orders in df_clients
-share_ne = 1-(df_join_count_ne/df_clients_ne_count) # share of orders that are not in GA data
-
-print("Share of orders that are not in GA data for NA: {:.2f}%".format(share_ne*100))
-
+print("Share of orders that are not in GA data for CH: {:.2f}%".format(share_orders_not_in_GA_ne *100))
+print("---------------------------------")
 ################################################################################################################
-#•	Does the “reco group” earn, on average, a greater revenue? Does it have larger orders? 
+#  •	Does the “reco group” earn, on average, a greater revenue? Does it have larger orders? 
 # Propose appropriate metrics and visualize them. Is there any other metric you may wish to evaluate?
 
 # reco group =  abUser == 1
 # control group = abUser == 2
 
+def f_test(group1, group2):
+    f = np.var(group1, ddof=1)/np.var(group2, ddof=1)
+    nun = group1.size-1
+    dun = group2.size-1
+    p_value = 1-stats.f.cdf(f, nun, dun)
+    return f, p_value
+
+### Check the distribution of the data for quantity and revenue
+df_join = df_join_ch
+plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker = "x")
+plt.xlabel('Quantity')
+plt.ylabel('Revenue')
+plt.legend(['reco group', 'control group'])
+plt.title('Distruibution of revenue and quantity for reco and control group for country CH')
+plt.show()
+
+df_join = df_join_ne
+plt.scatter(df_join['quantity'][df_join['abUser']==1], df_join['revenue'][df_join['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join['quantity'][df_join['abUser']==2], df_join['revenue'][df_join['abUser']==2], alpha=0.5, marker = "x")
+plt.xlabel('Quantity')
+plt.ylabel('Revenue')
+plt.legend(['reco group', 'control group'])
+plt.title('Distruibution of revenue and quantity for reco and control for country NE')
+plt.show()
+
+# Drop outliers from NE dataframe
+df_join_without_outliers = df_join_ne.drop(reco_max)
+
+# Plot of distribution without outliers
+plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==1], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==1], alpha=0.5, marker='o')
+plt.scatter(df_join_without_outliers['quantity'][df_join_without_outliers['abUser']==2], df_join_without_outliers['revenue'][df_join_without_outliers['abUser']==2], alpha=0.5, marker = "x")
+plt.xlabel('Quantity')
+plt.ylabel('Revenue')
+plt.legend(['reco group', 'control group'])
+plt.title('Distruibution of revenue and quantity for reco and control group without outliers for NE')
+plt.show()
+
+df_join_ne = df_join_without_outliers # refined dataframe
+
+###############
 reco_mean = df_join['revenue'][df_join['abUser']==1].mean() 
 control_mean = df_join['revenue'][df_join['abUser']==2].mean()
 
