@@ -22,15 +22,18 @@ import csv
 # with open('orders_final.csv', 'r') as file:
 #     csv_orders = csv.reader(file)
 
-# open csv file ans save as dataframe
+################################################################################################################
+# Open csv file ans save as dataframe
 df_clients = pd.read_csv('clients_final.csv',encoding="cp1250", sep=",", low_memory=False)
 df_orders = pd.read_csv('orders_final.csv',encoding="cp1250", sep=",", low_memory=False)
 
+################################################################################################################
 # Analysis of abUser column
 abUser_unique = df_clients['abUser'].unique() # 99 is not present here (just NaN)
 txt = "Unique values in abUser: {}"
 print(txt.format(abUser_unique))
 
+################################################################################################################
 # Devided into two groups by country
 df_clients_ch = df_clients[df_clients['country']=="CH"]
 df_clients_ne = df_clients[df_clients['country']=="NE"]
@@ -49,11 +52,7 @@ end_date = datetime(2023, 6, 16)
 
 df_clients_ch = correct_period(df_clients_ch, start_date, end_date)
 df_clients_ne = correct_period(df_clients_ne, start_date, end_date)
-################################################################################################################
-# Analysis of abUser column
-abUser_unique = df_clients['abUser'].unique() # 99 is not present here (just NaN)
-txt = "Unique values in abUser: {}"
-print(txt.format(abUser_unique))
+
 ################################################################################################################
 #### •	What about the users with an unassigned group? Bambino thinks the test is fine if their share is below 0.5%. 
 # First method
@@ -96,16 +95,25 @@ unassigned_group_ne = df_clients_ne[(df_clients_ne['abUser']).isna()]
 p_value_ne = binomial_test(unassigned_group_ne, assigned_group_ne, 0.005, 'less')
 print(p_value_ne)
 
+################################################################################################################
+### •	What about the orders that are not in GA data? What is their share? How do you propose to handle them?
+df_join_ch = df_clients_ch.merge(df_orders, on='orderNumber', how='inner') # inner join
+df_join_ne = df_clients_ne.merge(df_orders, on='orderNumber', how='inner') # inner join
+
+
+df_join_count_ch = df_join_ch['orderNumber'].count() # number of common orders in both dataframes
+df_clients_ch_count = df_clients_ch['orderNumber'].count() # number of orders in df_clients
+share_ch = 1-(df_join_count_ch/df_clients_ch_count) # share of orders that are not in GA data
+
+print("Share of orders that are not in GA data for CH: {:.2f}%".format(share_ch*100))
+
+df_join_count_ne = df_join_ne['orderNumber'].count() # number of common orders in both dataframes
+df_clients_ne_count = df_clients_ne['orderNumber'].count() # number of orders in df_clients
+share_ne = 1-(df_join_count_ne/df_clients_ne_count) # share of orders that are not in GA data
+
+print("Share of orders that are not in GA data for NA: {:.2f}%".format(share_ne*100))
 
 ################################################################################################################
-# •	What about the orders that are not in GA data? What is their share? How do you propose to handle them?
-df_join = df_clients.merge(df_orders, on='orderNumber', how='inner') # inner join
-df_join_count = df_join['orderNumber'].count() # number of common orders in both dataframes
-df_clients_count = df_clients['orderNumber'].count() # number of orders in df_clients
-share = 1-(df_join_count/df_clients_count) # share of orders that are not in GA data
-
-print("Share of orders that are not in GA data: {:.2f}%".format(share*100))
-
 #•	Does the “reco group” earn, on average, a greater revenue? Does it have larger orders? 
 # Propose appropriate metrics and visualize them. Is there any other metric you may wish to evaluate?
 
