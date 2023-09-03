@@ -86,9 +86,8 @@ df_orders_ne= df_orders_ne.dropna(subset=["orderNumber"]) # drop NaN
 def binomial_test(df_group1,df_group2, expected_proportion, alt):
     observed_success = len(df_group1)
     total_items = len(df_group1) + len(df_group2)
-    binom = stats.binomtest(observed_success, total_items, expected_proportion, alternative=alt)
-    p_value = stats.binom_test(observed_success, total_items, expected_proportion, alternative=alt)
-    return p_value, binom
+    return stats.binomtest(observed_success, total_items, expected_proportion, alternative=alt)
+   
 
 def filter_day_and_abUser (df,day, abUser):
     return df[(df['date'] == unique_days[day]) & (df['abUser'] == abUser)]
@@ -98,47 +97,57 @@ def check_share_of_abUser_each_day (df,unique_days):
         df_current_day_reco = filter_day_and_abUser(df,day,1)
         df_current_day_control = filter_day_and_abUser(df,day,2)
         share = 0.5
-        p_value,binom_test = binomial_test(df_current_day_reco, df_current_day_control, share, "two-sided")
+        binom = binomial_test(df_current_day_reco, df_current_day_control, share, "two-sided")
 
-        if p_value < 0.05:
-            print(f"Day {unique_days[day]} is significant")
+        if binom.pvalue < 0.05:
+            print(f"\tDay {unique_days[day]} is significant")
 
 ### Test for each day
+print("Test if the ratio of users in the reco group and users in the test group really 50:50\n")
+
 
 # CH
 unique_days = df_clients_ch['date'].unique()
 
-print("Significant p-values for CH (if any): ")
+print("Days with significant p-values for CH (if any): ")
 check_share_of_abUser_each_day(df_clients_ch,unique_days)
 
 # NE
 unique_days = df_clients_ne['date'].unique()
 
-print("Significant p-values for NE (if any): ")
+print("Days with significant p-values for NE (if any): ")
 check_share_of_abUser_each_day(df_clients_ne,unique_days)
 
-
+print("---------------------------------")
 ### Test for whole period
-
+print("Test ration for whole period: ")
 share = 0.5
 
 # CH
 df_clients_ch_reco = df_clients_ch['abUser'][df_clients_ch['abUser']==1]
 df_clients_ch_control = df_clients_ch['abUser'][df_clients_ch['abUser']==2]
 
-p_value_ch,binom_test_ch = binomial_test(df_clients_ch_reco , df_clients_ch_control, share, "two-sided")
+binom_ch = binomial_test(df_clients_ch_reco , df_clients_ch_control, share, "two-sided")
 
-print(f"Binomial test for CH: {binom_test_ch}")
-print(f"P-value: {p_value_ch}")
+print(f"Binomial test for CH: {binom_ch}")
+
+if binom_ch.pvalue < 0.05:
+    print("\tThe test is significant")
+else:
+    print("\tThe test is not significant")
 
 # NE
 df_clients_ne_reco = df_clients_ne['abUser'][df_clients_ne['abUser']==1]
 df_clients_ne_control = df_clients_ne['abUser'][df_clients_ne['abUser']==2]
 
-p_value_ne,binom_test_ne = binomial_test(df_clients_ne_reco , df_clients_ne_control, share, "two-sided")
+binom_ne = binomial_test(df_clients_ne_reco , df_clients_ne_control, share, "two-sided")
 
-print(f"Binomial test for NE: {binom_test_ne}")
-print(f"P-value: {p_value_ne}")
+print(f"Binomial test for NE: {binom_ne}")
+
+if binom_ne.pvalue < 0.05:
+    print("\tThe test is significant")
+else:
+    print("\tThe test is not significant")
 
 print("---------------------------------")
 ################################################################################################################
