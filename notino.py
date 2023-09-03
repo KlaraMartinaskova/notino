@@ -11,6 +11,7 @@ import seaborn as sns
 import numpy as np
 import scipy.stats as stats
 import pingouin as pg
+import datetime
 import zipfile
 import os
 import csv
@@ -57,7 +58,17 @@ df_clients_ch = correct_period(df_clients_ch, start_date, end_date) # data in co
 df_clients_ne = correct_period(df_clients_ne, start_date, end_date) # data in correct period
 
 ################################################################################################################
-### Delete duplicates and NaN
+### Select only unique clientID (for AB test we need to know assigment of each visitor to a group)
+# Sort dataframe by date
+df_clients_ch = df_clients_ch.sort_values(by=['date'])
+df_clients_ne = df_clients_ne.sort_values(by=['date'])
+
+# Drop duplicated client id and keep the first one
+df_clients_ch = df_clients_ch.drop_duplicates(subset=['clientID'], keep='first')
+df_clients_ne = df_clients_ne.drop_duplicates(subset=['clientID'], keep='first')
+
+################################################################################################################
+### Delete duplicates and NaN in orders
 
 df_orders_ch = df_orders_ch.drop_duplicates(subset=["orderNumber"], keep='first') # drop duplicates
 df_orders_ch= df_orders_ch.dropna(subset=["orderNumber"]) # drop NaN
@@ -65,6 +76,62 @@ df_orders_ch= df_orders_ch.dropna(subset=["orderNumber"]) # drop NaN
 df_orders_ne = df_orders_ne.drop_duplicates(subset=["orderNumber"], keep='first') # drop duplicates 
 df_orders_ne= df_orders_ne.dropna(subset=["orderNumber"]) # drop NaN
 
+################################################################################################################
+""" •	Is the ratio of users in the reco group and users in the test group really 50:50? 
+        Can you test it by an appropriate statistical test? 
+        Do you prefer to test it on a daily basis, or to run one test for the whole period? 
+        If you run multiple tests, do you need all of them to have positive results to verify the 50:50 distribution hypothesis? """
+
+
+def binomial_test(df_group1,df_group2, expected_proportion, alt):
+    observed_success = len(df_group1)
+    total_items = len(df_group1) + len(df_group2)
+    binom = stats.binomtest(observed_success, total_items, expected_proportion, alternative=alt)
+    p_value = stats.binom_test(observed_success, total_items, expected_proportion, alternative=alt)
+    return p_value, binom
+
+def filter_day_and_abUser (df,day, abUser):
+    return df[(df['date'] == unique_days[day]) & (df['abUser'] == abUser)]
+
+### Test for each day
+
+# CH
+unique_days = df_clients_ch['date'].unique()
+
+for day in range(len(unique_days)):
+    df_current_day_reco = filter_day_and_abUser(df_clients_ch,day,1)
+    df_current_day_control = filter_day_and_abUser(df_clients_ch,day,2)
+    share = 0.5
+    p_value,binom_test = binomial_test(df_current_day_reco, df_current_day_control, share, "two-sided")
+
+    if p_value < 0.05:
+        print(f"Day {unique_days[day]} is significant")
+
+
+# NE
+unique_days = df_clients_ne['date'].unique()
+
+### Test for whole period
+share = 0.5
+# CH
+df_clients_ch_reco = df_clients_ch['abUser'][df_clients_ch['abUser']==1]
+df_clients_ch_control = df_clients_ch['abUser'][df_clients_ch['abUser']==2]
+
+p_value_ch,binom_test_ch = binomial_test(df_clients_ch_reco , df_clients_ch_control, share, "two-sided")
+
+print(f"Binomial test for CH: {binom_test_ch}")
+print(f"P-value: {p_value_ch}")
+
+# NE
+df_clients_ne_reco = df_clients_ne['abUser'][df_clients_ne['abUser']==1]
+df_clients_ne_control = df_clients_ne['abUser'][df_clients_ne['abUser']==2]
+
+p_value_ne,binom_test_ne = binomial_test(df_clients_ne_reco , df_clients_ne_control, share, "two-sided")
+
+print(f"Binomial test for NE: {binom_test_ne}")
+print(f"P-value: {p_value_ne}")
+
+print("---------------------------------")
 ################################################################################################################
 #### •	What about the users with an unassigned group? Bambino thinks the test is fine if their share is below 0.5%. 
 # First method
@@ -86,27 +153,29 @@ share_ch = unassigned_share(df_clients_ch)
 share_ne = unassigned_share(df_clients_ne)
 
 # Second method with binomial test
-def binomial_test(df_group1,df_group2, expected_proportion, alt ):
+def binomial_test(df_group1,df_group2, expected_proportion, alt):
     observed_success = len(df_group1)
     total_items = len(df_group1) + len(df_group2)
     binom = stats.binomtest(observed_success, total_items, expected_proportion, alternative=alt)
     p_value = stats.binom_test(observed_success, total_items, expected_proportion, alternative=alt)
-    print(f"Binomial test: {binom}")
-    print(f"P-value: {p_value}")
-    return p_value
+    return p_value, binom
 
 # CH
 assigned_group_ch = df_clients_ch['abUser'][(df_clients_ch['abUser']==1) | (df_clients_ch['abUser']==2)]
 unassigned_group_ch = df_clients_ch[(df_clients_ch['abUser']).isna()]
-p_value_ch = binomial_test(unassigned_group_ch, assigned_group_ch, 0.005, 'less')
-print(p_value_ch)
+p_value_ch, binom_ch = binomial_test(unassigned_group_ch, assigned_group_ch, 0.005, 'less')
+
+print(f"Binomial test: {binom_ch}")
+print(f"P-value: {p_value_ch}")
 
 # NE
 assigned_group_ne = df_clients_ne['abUser'][(df_clients_ne['abUser']==1) | (df_clients_ne['abUser']==2)]
 unassigned_group_ne = df_clients_ne[(df_clients_ne['abUser']).isna()]
-p_value_ne = binomial_test(unassigned_group_ne, assigned_group_ne, 0.005, 'less')
-print(p_value_ne)
+p_value_ne, binom_ne= binomial_test(unassigned_group_ne, assigned_group_ne, 0.005, 'less')
 
+print(f"Binomial test for NE: {binom_ne}")
+print(f"P-value: {p_value_ne}")
+print("---------------------------------")
 ################################################################################################################
 ### •	What about the orders that are not in GA data? What is their share? How do you propose to handle them?
 # CH
