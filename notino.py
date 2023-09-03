@@ -173,8 +173,8 @@ def unassigned_share(df):
     reco_count = df["abUser"][df["abUser"] == 1].count()
     control_count = df["abUser"][df["abUser"] == 2].count()
 
-    unassigned_count = df["abUser"][(
-        df["abUser"] != 1) & (df["abUser"] != 2)].count()
+    unassigned_count = len(
+        df["abUser"][(df["abUser"] != 1) & (df["abUser"] != 2)])
     unnasigned_percent_share = unassigned_count / \
         ((reco_count + control_count + unassigned_count))*100
 
